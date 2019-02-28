@@ -37,28 +37,12 @@ package java.util.concurrent;
 import java.util.concurrent.locks.LockSupport;
 
 /**
- * A cancellable asynchronous computation.  This class provides a base
- * implementation of {@link Future}, with methods to start and cancel
- * a computation, query to see if the computation is complete, and
- * retrieve the result of the computation.  The result can only be
- * retrieved when the computation has completed; the {@code get}
- * methods will block if the computation has not yet completed.  Once
- * the computation has completed, the computation cannot be restarted
- * or cancelled (unless the computation is invoked using
- * {@link #runAndReset}).
+ * 一个可取消的异步计算。
+ * 实现 Future
+ * 如果计算没有完成 get 方法将会阻塞
  *
- * <p>A {@code FutureTask} can be used to wrap a {@link Callable} or
- * {@link Runnable} object.  Because {@code FutureTask} implements
- * {@code Runnable}, a {@code FutureTask} can be submitted to an
- * {@link Executor} for execution.
- *
- * <p>In addition to serving as a standalone class, this class provides
- * {@code protected} functionality that may be useful when creating
- * customized task classes.
- *
- * @since 1.5
- * @author Doug Lea
- * @param <V> The result type returned by this FutureTask's {@code get} methods
+ * 一个 FutureTask 对象可以被包装成 Callable 或者 Runnable 对象.
+ * 一个 FutureTask 可以提交给 Executor 去执行
  */
 public class FutureTask<V> implements RunnableFuture<V> {
     /*
@@ -68,22 +52,10 @@ public class FutureTask<V> implements RunnableFuture<V> {
      * cancellation races. Sync control in the current design relies
      * on a "state" field updated via CAS to track completion, along
      * with a simple Treiber stack to hold waiting threads.
-     *
-     * Style note: As usual, we bypass overhead of using
-     * AtomicXFieldUpdaters and instead directly use Unsafe intrinsics.
      */
 
     /**
-     * The run state of this task, initially NEW.  The run state
-     * transitions to a terminal state only in methods set,
-     * setException, and cancel.  During completion, state may take on
-     * transient values of COMPLETING (while outcome is being set) or
-     * INTERRUPTING (only while interrupting the runner to satisfy a
-     * cancel(true)). Transitions from these intermediate to final
-     * states use cheaper ordered/lazy writes because values are unique
-     * and cannot be further modified.
-     *
-     * Possible state transitions:
+     * 可能的状态改变:
      * NEW -> COMPLETING -> NORMAL
      * NEW -> COMPLETING -> EXCEPTIONAL
      * NEW -> CANCELLED
@@ -98,19 +70,19 @@ public class FutureTask<V> implements RunnableFuture<V> {
     private static final int INTERRUPTING = 5;
     private static final int INTERRUPTED  = 6;
 
-    /** The underlying callable; nulled out after running */
+    /** 底层的调用;运行后为空 */
     private Callable<V> callable;
-    /** The result to return or exception to throw from get() */
-    private Object outcome; // non-volatile, protected by state reads/writes
-    /** The thread running the callable; CASed during run() */
+    /** get() 的 返回的结果 或 抛出的异常
+     * 非易失的，读写受保护 */
+    private Object outcome;
+    /** 运行可调用的线程;*/
     private volatile Thread runner;
-    /** Treiber stack of waiting threads */
+    /** 等待线程 */
     private volatile WaitNode waiters;
 
     /**
-     * Returns result or throws exception for completed task.
-     *
-     * @param s completed state value
+     * 返回已完成任务的结果或抛出异常
+     * @param s 完成状态值
      */
     @SuppressWarnings("unchecked")
     private V report(int s) throws ExecutionException {
@@ -123,32 +95,21 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Creates a {@code FutureTask} that will, upon running, execute the
-     * given {@code Callable}.
-     *
-     * @param  callable the callable task
-     * @throws NullPointerException if the callable is null
+     * 构造函数，在执行期间会执行给定的 Callable
      */
     public FutureTask(Callable<V> callable) {
         if (callable == null)
             throw new NullPointerException();
         this.callable = callable;
-        this.state = NEW;       // ensure visibility of callable
+        this.state = NEW;       // 确保 callable 的可见性
     }
 
     /**
-     * Creates a {@code FutureTask} that will, upon running, execute the
-     * given {@code Runnable}, and arrange that {@code get} will return the
-     * given result on successful completion.
-     *
-     * @param runnable the runnable task
-     * @param result the result to return on successful completion. If
-     * you don't need a particular result, consider using
-     * constructions of the form:
-     * {@code Future<?> f = new FutureTask<Void>(runnable, null)}
-     * @throws NullPointerException if the runnable is null
+     * 构造函数，在执行期间会执行给定的 Runnable
+     * 安排 get 返回成功执行的结果.
      */
     public FutureTask(Runnable runnable, V result) {
+        //将 runnable 封装成 RunnableAdapter
         this.callable = Executors.callable(runnable, result);
         this.state = NEW;       // ensure visibility of callable
     }
